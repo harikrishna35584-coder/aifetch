@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIFetch – Find the right AI tool</title>
+<style>
+  :root { --bg:#f5f7fb; --card:#fff; --text:#1c2333; --muted:#667085; --brand:#4f46e5; --border:#e4e7ee; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  .wrap { max-width:760px; margin:0 auto; padding:48px 20px; }
+  h1 { text-align:center; margin:0; font-size:2.2rem; }
+  h1 span { color:var(--brand); }
+  .sub { text-align:center; color:var(--muted); margin:8px 0 28px; }
+  form { display:flex; gap:10px; }
+  input { flex:1; padding:14px 16px; font-size:1rem; border:1px solid var(--border); border-radius:10px; outline:none; }
+  input:focus { border-color:var(--brand); }
+  button { padding:0 22px; font-size:1rem; font-weight:600; color:#fff; background:var(--brand); border:0; border-radius:10px; cursor:pointer; }
+  button:hover { opacity:.9; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 26px; justify-content:center; }
+  .chip { font-size:.85rem; padding:6px 12px; border:1px solid var(--border); background:var(--card); border-radius:999px; cursor:pointer; color:var(--muted); }
+  .chip:hover { border-color:var(--brand); color:var(--brand); }
+  .status { text-align:center; color:var(--muted); margin:20px 0; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 20px; margin-bottom:14px; }
+  .top { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .name { font-size:1.1rem; font-weight:700; }
+  .ok { color:#16a34a; font-size:.8rem; font-weight:600; margin-left:6px; }
+  .score { font-size:.8rem; color:var(--brand); background:#eef0ff; padding:3px 10px; border-radius:999px; white-space:nowrap; }
+  .desc { margin:8px 0 12px; color:#3b4457; line-height:1.5; }
+  .meta { display:flex; justify-content:space-between; align-items:center; }
+  .badge { font-size:.78rem; color:var(--muted); }
+  a.visit { color:var(--brand); font-weight:600; text-decoration:none; }
+  a.visit:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AI<span>Fetch</span></h1>
+  <p class="sub">Describe what you need. We'll find the right AI tool.</p>
+
+  <form id="form">
+    <input id="q" placeholder="e.g. I need a tool to create images from text" autocomplete="off" required minlength="2">
+    <button type="submit">Search</button>
+  </form>
+
+  <div class="chips" id="chips"></div>
+  <div id="results"></div>
+</div>
+
+<script>
+const examples = [
+  "I need a text to image creation tool",
+  "summarize my meetings automatically",
+  "help me write code faster",
+  "make a presentation from a prompt",
+  "convert text into realistic voice",
+];
+
+const form = document.getElementById("form");
+const input = document.getElementById("q");
+const results = document.getElementById("results");
+
+// Example chips
+document.getElementById("chips").innerHTML = examples
+  .map(e => `<span class="chip">${e}</span>`).join("");
+document.querySelectorAll(".chip").forEach(chip =>
+  chip.addEventListener("click", () => { input.value = chip.textContent; search(); })
+);
+
+form.addEventListener("submit", e => { e.preventDefault(); search(); });
+
+async function search() {
+  const q = input.value.trim();
+  if (q.length < 2) return;
+  results.innerHTML = '<p class="status">Searching…</p>';
+  try {
+    const res = await fetch("/api/search?q=" + encodeURIComponent(q));
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    render(data.results);
+  } catch {
+    results.innerHTML = '<p class="status">Something went wrong. Please try again.</p>';
+  }
+}
+
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function render(items) {
+  if (!items.length) {
+    results.innerHTML = '<p class="status">No matching tools found. Try describing your need differently.</p>';
+    return;
+  }
+  results.innerHTML = items.map(t => `
+    <div class="card">
+      <div class="top">
+        <div><span class="name">${esc(t.name)}</span><span class="ok">✔ Verified</span></div>
+        <span class="score">${t.score}% match</span>
+      </div>
+      <p class="desc">${esc(t.description)}</p>
+      <div class="meta">
+        <span class="badge">${esc(t.category)} • ${esc(t.pricing)}</span>
+        <a class="visit" href="${esc(t.url)}" target="_blank" rel="noopener">Visit ↗</a>
+      </div>
+    </div>`).join("");
+}
+</script>
+</body>
+</html>
